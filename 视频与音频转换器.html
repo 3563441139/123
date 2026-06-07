@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>视频音频分离 & 合并工具</title>
+    <style>
+        :root {
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --surface2: #22223a;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --text: #e0e0e0;
+            --text2: #b0b0c0;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --border: #2a2a40;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--surface);
+            border-radius: 24px;
+            padding: 24px 20px 28px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        /* Header */
+        .app-header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .app-header .icon {
+            font-size: 42px;
+            margin-bottom: 6px;
+        }
+        .app-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #fff;
+        }
+        .app-header .subtitle {
+            font-size: 13px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
+
+        /* Tabs */
+        .tab-row {
+            display: flex;
+            background: var(--surface2);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 10px;
+            border: none;
+            background: transparent;
+            color: var(--text2);
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 11px;
+            cursor: pointer;
+            transition: all 0.25s;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(108, 92, 231, 0.35);
+        }
+        .tab-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Panels */
+        .panel {
+            display: none;
+            animation: fadeSlideIn 0.3s ease;
+        }
+        .panel.active {
+            display: block;
+        }
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface2);
+            border-radius: var(--radius);
+            padding: 18px 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+            transition: border-color 0.3s;
+        }
+        .card.highlight {
+            border-color: var(--accent);
+            border-width: 1.5px;
+        }
+        .card-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent2);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card-label .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: inline-block;
+        }
+
+        /* File inputs */
+        .file-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: rgba(255, 255, 255, 0.015);
+            position: relative;
+        }
+        .file-zone:active {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.08);
+        }
+        .file-zone.has-file {
+            border-color: var(--success);
+            border-style: solid;
+            background: rgba(46, 204, 113, 0.06);
+        }
+        .file-zone .zone-icon {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .file-zone .zone-text {
+            font-size: 14px;
+            color: var(--text2);
+        }
+        .file-zone .zone-filename {
+            font-size: 13px;
+            color: var(--success);
+            font-weight: 600;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+        .file-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: all 0.25s;
+            width: 100%;
+            white-space: nowrap;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.3);
+        }
+        .btn-primary:disabled {
+            background: #444;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent2);
+        }
+        .btn-download {
+            background: var(--success);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.25);
+        }
+        .btn-sm {
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 20px;
+            width: auto;
+            flex: 1;
+        }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Progress */
+        .progress-wrap {
+            margin-top: 12px;
+            display: none;
+        }
+        .progress-wrap.visible {
+            display: block;
+        }
+        .progress-bar-bg {
+            background: var(--border);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s linear;
+        }
+        .progress-text {
+            font-size: 13px;
+            color: var(--text2);
+            text-align: center;
+        }
+
+        /* Status */
+        .status-msg {
+            text-align: center;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            margin-top: 10px;
+            display: none;
+            font-weight: 500;
+        }
+        .status-msg.visible {
+            display: block;
+        }
+        .status-msg.info {
+            background: rgba(108, 92, 231, 0.15);
+            color: var(--accent2);
+        }
+        .status-msg.success {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+        }
+        .status-msg.error {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+        }
+
+        /* Output */
+        .output-section {
+            margin-top: 14px;
+            display: none;
+        }
+        .output-section.visible {
+            display: block;
+        }
+
+        /* Video preview */
+        .preview-video {
+            width: 100%;
+            border-radius: var(--radius-sm);
+            max-height: 220px;
+            background: #000;
+            object-fit: contain;
+            display: none;
+            margin-top: 8px;
+        }
+        .preview-video.visible {
+            display: block;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 380px) {
+            .app-container {
+                padding: 18px 12px 22px;
+                border-radius: 20px;
+            }
+            .tab-btn {
+                font-size: 13px;
+                padding: 10px 6px;
+            }
+            .btn {
+                font-size: 14px;
+                padding: 12px 18px;
+            }
+            .card {
+                padding: 14px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <div class="app-header">
+            <div class="icon">🎬</div>
+            <h1>视频音频工具箱</h1>
+            <p class="subtitle">一键分离 · 轻松合并</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-row">
+            <button class="tab-btn active" data-tab="split">✂️ 分离</button>
+            <button class="tab-btn" data-tab="merge">🔗 合并</button>
+        </div>
+
+        <!-- ==================== 分离面板 ==================== -->
+        <div class="panel active" id="panel-split">
+            <div class="card highlight">
+                <div class="card-label"><span class="dot"></span>选择视频文件</div>
+                <div class="file-zone" id="split-file-zone">
+                    <span class="zone-icon">📹</span>
+                    <span class="zone-text">点击选择视频文件</span>
+                    <span class="zone-filename" id="split-filename"></span>
+                    <input type="file" id="split-file-input" accept="video/*">
+                </div>
+            </div>
+
+            <video id="split-preview-video" class="preview-video" controls muted playsinline></video>
+
+            <button class="btn btn-primary" id="btn-split" disabled>
+                ⚡ 一键拆解（分离视频和音频）
+            </button>
+
+            <div class="progress-wrap" id="split-progress-wrap">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="split-progress-bar"></div>
+                </div>
+                <p class="progress-text" id="split-progress-text">处理中...</p>
+            </div>
+
+            <div class="status-msg" id="split-status"></div>
+
+            <div class="output-section" id="split-output">
+                <p style="font-weight:700;margin-bottom:8px;font-size:14px;color:var(--accent2);">
+                    ✅ 分离完成，点击下载：
+                </p>
+                <div class="btn-row">
+                    <button class="btn btn-download btn-sm" id="btn-download-audio">
+                        🔊 下载音频
+                    </button>
+                    <button class="btn btn-download btn-sm" id="btn-download-video-silent">
+                        🎞️ 下载无声视频
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 合并面板 ==================== -->
+        <div class="panel" id="panel-merge">
+            <div class="card highlight">
+                <div class="card-label"><span class="dot"></span>选择视频文件（画面来源）</div>
+                <div class="file-zone" id="merge-video-zone">
+                    <span class="zone-icon">🎞️</span>
+                    <span class="zone-text">点击选择视频文件</span>
+                    <span class="zone-filename" id="merge-video-filename"></span>
+                    <input type="file" id="merge-video-input" accept="video/*">
+                </div>
+            </div>
+
+            <div class="card highlight">
+                <div class="card-label"><span class="dot"></span>选择音频文件（声音来源）</div>
+                <div class="file-zone" id="merge-audio-zone">
+                    <span class="zone-icon">🎵</span>
+                    <span class="zone-text">点击选择音频文件</span>
+                    <span class="zone-filename" id="merge-audio-filename"></span>
+                    <input type="file" id="merge-audio-input" accept="audio/*">
+                </div>
+            </div>
+
+            <video id="merge-preview-video" class="preview-video" controls muted playsinline></video>
+
+            <button class="btn btn-primary" id="btn-merge" disabled>
+                ⚡ 一键合并（视频+音频合成）
+            </button>
+
+            <div class="progress-wrap" id="merge-progress-wrap">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="merge-progress-bar"></div>
+                </div>
+                <p class="progress-text" id="merge-progress-text">处理中...</p>
+            </div>
+
+            <div class="status-msg" id="merge-status"></div>
+
+            <div class="output-section" id="merge-output">
+                <p style="font-weight:700;margin-bottom:8px;font-size:14px;color:var(--accent2);">
+                    ✅ 合并完成，点击下载：
+                </p>
+                <button class="btn btn-download btn-sm" id="btn-download-merged" style="width:100%;">
+                    🎬 下载合并后的视频
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 隐藏的处理用元素 -->
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+    <script>
+        (function() {
+            // ============ DOM 元素 ============
+            // Tabs
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.panel');
+
+            // Split panel
+            const splitFileZone = document.getElementById('split-file-zone');
+            const splitFileInput = document.getElementById('split-file-input');
+            const splitFilename = document.getElementById('split-filename');
+            const splitPreviewVideo = document.getElementById('split-preview-video');
+            const btnSplit = document.getElementById('btn-split');
+            const splitProgressWrap = document.getElementById('split-progress-wrap');
+            const splitProgressBar = document.getElementById('split-progress-bar');
+            const splitProgressText = document.getElementById('split-progress-text');
+            const splitStatus = document.getElementById('split-status');
+            const splitOutput = document.getElementById('split-output');
+            const btnDownloadAudio = document.getElementById('btn-download-audio');
+            const btnDownloadVideoSilent = document.getElementById('btn-download-video-silent');
+
+            // Merge panel
+            const mergeVideoZone = document.getElementById('merge-video-zone');
+            const mergeVideoInput = document.getElementById('merge-video-input');
+            const mergeVideoFilename = document.getElementById('merge-video-filename');
+            const mergeAudioZone = document.getElementById('merge-audio-zone');
+            const mergeAudioInput = document.getElementById('merge-audio-input');
+            const mergeAudioFilename = document.getElementById('merge-audio-filename');
+            const mergePreviewVideo = document.getElementById('merge-preview-video');
+            const btnMerge = document.getElementById('btn-merge');
+            const mergeProgressWrap = document.getElementById('merge-progress-wrap');
+            const mergeProgressBar = document.getElementById('merge-progress-bar');
+            const mergeProgressText = document.getElementById('merge-progress-text');
+            const mergeStatus = document.getElementById('merge-status');
+            const mergeOutput = document.getElementById('merge-output');
+            const btnDownloadMerged = document.getElementById('btn-download-merged');
+
+            // Hidden
+            const hiddenCanvas = document.getElementById('hidden-canvas');
+            const toast = document.getElementById('toast');
+
+            // ============ 状态变量 ============
+            let splitVideoFile = null;
+            let splitAudioBlob = null;
+            let splitSilentVideoBlob = null;
+            let splitProcessing = false;
+
+            let mergeVideoFile = null;
+            let mergeAudioFile = null;
+            let mergeResultBlob = null;
+            let mergeProcessing = false;
+
+            // ============ Toast ============
+            let toastTimer;
+
+            function showToast(msg) {
+                toast.textContent = msg;
+                toast.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+            }
+
+            // ============ 标签切换 ============
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const target = btn.dataset.tab;
+                    panels.forEach(p => p.classList.remove('active'));
+                    if (target === 'split') {
+                        document.getElementById('panel-split').classList.add('active');
+                    } else {
+                        document.getElementById('panel-merge').classList.add('active');
+                    }
+                    // 切换时暂停所有预览
+                    splitPreviewVideo.pause();
+                    mergePreviewVideo.pause();
+                });
+            });
+
+            // ============ 辅助函数 ============
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            function getSupportedMimeType(preferVideo = true) {
+                if (preferVideo) {
+                    const types = [
+                        'video/webm;codecs=vp8,opus',
+                        'video/webm;codecs=vp9,opus',
+                        'video/webm;codecs=vp8',
+                        'video/webm',
+                        'video/mp4',
+                    ];
+                    for (const t of types) {
+                        if (MediaRecorder.isTypeSupported(t)) return t;
+                    }
+                } else {
+                    const types = [
+                        'audio/webm;codecs=opus',
+                        'audio/webm',
+                        'audio/ogg;codecs=opus',
+                        'audio/mp4',
+                    ];
+                    for (const t of types) {
+                        if (MediaRecorder.isTypeSupported(t)) return t;
+                    }
+                }
+                return 'video/webm'; // fallback
+            }
+
+            function getFileExtension(mimeType) {
+                if (mimeType.includes('mp4')) return 'mp4';
+                if (mimeType.includes('ogg')) return 'ogg';
+                if (mimeType.includes('webm')) return 'webm';
+                return 'webm';
+            }
+
+            // ============ 分离面板逻辑 ============
+            splitFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                splitVideoFile = file;
+                splitFilename.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+                splitFileZone.classList.add('has-file');
+                btnSplit.disabled = false;
+                splitOutput.classList.remove('visible');
+                splitStatus.classList.remove('visible');
+                splitAudioBlob = null;
+                splitSilentVideoBlob = null;
+
+                // 预览
+                const url = URL.createObjectURL(file);
+                splitPreviewVideo.src = url;
+                splitPreviewVideo.classList.add('visible');
+                splitPreviewVideo.load();
+            });
+
+            btnSplit.addEventListener('click', async () => {
+                if (!splitVideoFile || splitProcessing) return;
+                splitProcessing = true;
+                btnSplit.disabled = true;
+                btnSplit.textContent = '⏳ 处理中...';
+                splitOutput.classList.remove('visible');
+                splitStatus.classList.remove('visible');
+                splitProgressWrap.classList.add('visible');
+                splitProgressBar.style.width = '0%';
+                splitProgressText.textContent = '准备处理...';
+                splitAudioBlob = null;
+                splitSilentVideoBlob = null;
+
+                try {
+                    await performSplit(splitVideoFile);
+                } catch (err) {
+                    console.error('分离失败:', err);
+                    showStatus(splitStatus, 'error', '❌ 分离失败：' + err.message);
+                    splitProgressWrap.classList.remove('visible');
+                }
+
+                splitProcessing = false;
+                btnSplit.disabled = !splitVideoFile;
+                btnSplit.textContent = '⚡ 一键拆解（分离视频和音频）';
+            });
+
+            async function performSplit(file) {
+                const videoUrl = URL.createObjectURL(file);
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.muted = true; // 静音播放用于 Canvas 捕获
+                video.playsInline = true;
+                video.preload = 'auto';
+                video.setAttribute('playsinline', '');
+                video.setAttribute('webkit-playsinline', '');
+
+                // 等待视频元数据加载
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = resolve;
+                    video.onerror = () => reject(new Error('无法加载视频文件'));
+                    video.load();
+                });
+
+                const duration = video.duration;
+                if (!isFinite(duration) || duration <= 0) {
+                    throw new Error('无法获取视频时长');
+                }
+                if (duration > 600) {
+                    // 超过10分钟警告但允许继续
+                    console.warn('视频较长（' + Math.round(duration) + '秒），处理时间会相应增加');
+                }
+
+                splitProgressText.textContent = '视频时长：' + Math.round(duration) + ' 秒，开始处理...';
+                splitProgressBar.style.width = '2%';
+
+                // 设置 Canvas 尺寸
+                const vw = video.videoWidth || 1280;
+                const vh = video.videoHeight || 720;
+                hiddenCanvas.width = vw;
+                hiddenCanvas.height = vh;
+                const ctx = hiddenCanvas.getContext('2d');
+
+                // --- 同时准备音频录制 ---
+                // 创建一个新的 video 元素用于音频捕获（不能静音）
+                const audioVideo = document.createElement('video');
+                audioVideo.src = videoUrl;
+                audioVideo.muted = false;
+                audioVideo.playsInline = true;
+                audioVideo.preload = 'auto';
+                audioVideo.setAttribute('playsinline', '');
+                audioVideo.setAttribute('webkit-playsinline', '');
+                audioVideo.volume = 0.001; // 极低音量避免打扰用户
+
+                await new Promise((resolve, reject) => {
+                    audioVideo.onloadedmetadata = resolve;
+                    audioVideo.onerror = () => reject(new Error('无法加载音频轨道'));
+                    audioVideo.load();
+                });
+
+                // 捕获音频流
+                let audioStream;
+                try {
+                    audioStream = audioVideo.captureStream();
+                } catch (e) {
+                    // fallback
+                    audioStream = audioVideo.mozCaptureStream ? audioVideo.mozCaptureStream() : null;
+                }
+                if (!audioStream || audioStream.getAudioTracks().length === 0) {
+                    throw new Error('该视频没有音频轨道，无法分离');
+                }
+
+                const audioTrack = audioStream.getAudioTracks()[0];
+                const pureAudioStream = new MediaStream([audioTrack]);
+
+                const audioMimeType = getSupportedMimeType(false);
+                const audioChunks = [];
+                const audioRecorder = new MediaRecorder(pureAudioStream, {
+                    mimeType: audioMimeType,
+                    audioBitsPerSecond: 128000,
+                });
+                audioRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+
+                // --- 准备视频录制（Canvas无声） ---
+                const canvasStream = hiddenCanvas.captureStream(30);
+                const videoMimeType = getSupportedMimeType(true);
+                const videoChunks = [];
+                const videoRecorder = new MediaRecorder(canvasStream, {
+                    mimeType: videoMimeType,
+                    videoBitsPerSecond: 2500000,
+                });
+                videoRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) videoChunks.push(e.data);
+                };
+
+                // 同时开始录制
+                audioRecorder.start(500);
+                videoRecorder.start(500);
+
+                // 同时开始播放
+                video.currentTime = 0;
+                audioVideo.currentTime = 0;
+                await video.play();
+                await audioVideo.play();
+
+                const startTime = performance.now();
+
+                // 逐帧绘制 Canvas
+                async function drawFrame() {
+                    if (video.ended || video.paused) return;
+                    const elapsed = (performance.now() - startTime) / 1000;
+                    if (elapsed >= duration) {
+                        // 到达结尾
+                        return;
+                    }
+                    ctx.clearRect(0, 0, vw, vh);
+                    ctx.drawImage(video, 0, 0, vw, vh);
+                    const progress = Math.min(elapsed / duration * 100, 98);
+                    splitProgressBar.style.width = progress.toFixed(1) + '%';
+                    splitProgressText.textContent =
+                        '处理中... ' + Math.round(elapsed) + 's / ' + Math.round(duration) + 's';
+                    requestAnimationFrame(drawFrame);
+                }
+                drawFrame();
+
+                // 等待视频和音频播放完成
+                await Promise.all([
+                    new Promise(resolve => {
+                        video.onended = resolve;
+                        // 超时保护
+                        setTimeout(resolve, (duration + 5) * 1000);
+                    }),
+                    new Promise(resolve => {
+                        audioVideo.onended = resolve;
+                        setTimeout(resolve, (duration + 5) * 1000);
+                    }),
+                ]);
+
+                // 短暂延迟确保最后的数据被收集
+                await new Promise(r => setTimeout(r, 300));
+
+                // 停止录制
+                const audioStopPromise = new Promise(resolve => {
+                    audioRecorder.onstop = resolve;
+                });
+                const videoStopPromise = new Promise(resolve => {
+                    videoRecorder.onstop = resolve;
+                });
+                audioRecorder.stop();
+                videoRecorder.stop();
+                await Promise.all([audioStopPromise, videoStopPromise]);
+
+                // 等待最后的数据块
+                await new Promise(r => setTimeout(r, 200));
+
+                // 创建 Blob
+                splitAudioBlob = new Blob(audioChunks, { type: audioMimeType });
+                splitSilentVideoBlob = new Blob(videoChunks, { type: videoMimeType });
+
+                // 清理
+                video.pause();
+                audioVideo.pause();
+                URL.revokeObjectURL(videoUrl);
+
+                splitProgressBar.style.width = '100%';
+                splitProgressText.textContent = '✅ 分离完成！';
+                splitProgressWrap.classList.remove('visible');
+                splitOutput.classList.add('visible');
+                showStatus(splitStatus, 'success',
+                    '✅ 分离成功！音频大小：' + formatFileSize(splitAudioBlob.size) +
+                    ' | 无声视频大小：' + formatFileSize(splitSilentVideoBlob.size));
+            }
+
+            // 下载音频
+            btnDownloadAudio.addEventListener('click', () => {
+                if (!splitAudioBlob) return;
+                const ext = getFileExtension(splitAudioBlob.type);
+                downloadBlob(splitAudioBlob, '分离音频_' + Date.now() + '.' + ext);
+            });
+
+            // 下载无声视频
+            btnDownloadVideoSilent.addEventListener('click', () => {
+                if (!splitSilentVideoBlob) return;
+                const ext = getFileExtension(splitSilentVideoBlob.type);
+                downloadBlob(splitSilentVideoBlob, '无声视频_' + Date.now() + '.' + ext);
+            });
+
+            // ============ 合并面板逻辑 ============
+            mergeVideoInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                mergeVideoFile = file;
+                mergeVideoFilename.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+                mergeVideoZone.classList.add('has-file');
+                checkMergeReady();
+                mergeOutput.classList.remove('visible');
+                mergeStatus.classList.remove('visible');
+                mergeResultBlob = null;
+
+                const url = URL.createObjectURL(file);
+                mergePreviewVideo.src = url;
+                mergePreviewVideo.classList.add('visible');
+                mergePreviewVideo.load();
+            });
+
+            mergeAudioInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                mergeAudioFile = file;
+                mergeAudioFilename.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+                mergeAudioZone.classList.add('has-file');
+                checkMergeReady();
+                mergeOutput.classList.remove('visible');
+                mergeStatus.classList.remove('visible');
+                mergeResultBlob = null;
+            });
+
+            function checkMergeReady() {
+                btnMerge.disabled = !(mergeVideoFile && mergeAudioFile);
+            }
+
+            btnMerge.addEventListener('click', async () => {
+                if (!mergeVideoFile || !mergeAudioFile || mergeProcessing) return;
+                mergeProcessing = true;
+                btnMerge.disabled = true;
+                btnMerge.textContent = '⏳ 合成中...';
+                mergeOutput.classList.remove('visible');
+                mergeStatus.classList.remove('visible');
+                mergeProgressWrap.classList.add('visible');
+                mergeProgressBar.style.width = '0%';
+                mergeProgressText.textContent = '准备合成...';
+                mergeResultBlob = null;
+
+                try {
+                    await performMerge(mergeVideoFile, mergeAudioFile);
+                } catch (err) {
+                    console.error('合并失败:', err);
+                    showStatus(mergeStatus, 'error', '❌ 合并失败：' + err.message);
+                    mergeProgressWrap.classList.remove('visible');
+                }
+
+                mergeProcessing = false;
+                btnMerge.disabled = !(mergeVideoFile && mergeAudioFile);
+                btnMerge.textContent = '⚡ 一键合并（视频+音频合成）';
+            });
+
+            async function performMerge(videoFile, audioFile) {
+                const videoUrl = URL.createObjectURL(videoFile);
+                const audioUrl = URL.createObjectURL(audioFile);
+
+                // 加载视频
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'auto';
+                video.setAttribute('playsinline', '');
+                video.setAttribute('webkit-playsinline', '');
+
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = resolve;
+                    video.onerror = () => reject(new Error('无法加载视频文件'));
+                    video.load();
+                });
+
+                const videoDuration = video.duration;
+                if (!isFinite(videoDuration) || videoDuration <= 0) {
+                    throw new Error('无法获取视频时长');
+                }
+
+                // 加载音频
+                const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                const audioArrayBuffer = await audioFile.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
+                const audioDuration = audioBuffer.duration;
+
+                // 使用较短的时长
+                const totalDuration = Math.min(videoDuration, audioDuration);
+                if (totalDuration <= 0) throw new Error('视频或音频时长为0');
+
+                mergeProgressText.textContent =
+                    '视频：' + Math.round(videoDuration) + 's | 音频：' + Math.round(audioDuration) +
+                    's | 合成时长：' + Math.round(totalDuration) + 's';
+
+                // 设置 Canvas
+                const vw = video.videoWidth || 1280;
+                const vh = video.videoHeight || 720;
+                hiddenCanvas.width = vw;
+                hiddenCanvas.height = vh;
+                const ctx = hiddenCanvas.getContext('2d');
+
+                // Canvas 流
+                const canvasStream = hiddenCanvas.captureStream(30);
+                const videoTrackFromCanvas = canvasStream.getVideoTracks()[0];
+
+                // 音频源
+                const audioSource = audioContext.createBufferSource();
+                audioSource.buffer = audioBuffer;
+                const mediaStreamDest = audioContext.createMediaStreamDestination();
+                audioSource.connect(mediaStreamDest);
+                audioSource.connect(audioContext.destination); // 也输出到扬声器（极低音量）
+                audioContext.destination.channelCount = 2;
+                // 降低输出音量
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0.001;
+                audioSource.disconnect(audioContext.destination);
+                audioSource.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                const audioTrackFromStream = mediaStreamDest.stream.getAudioTracks()[0];
+
+                // 合并流
+                const combinedStream = new MediaStream([videoTrackFromCanvas, audioTrackFromStream]);
+
+                const mimeType = getSupportedMimeType(true);
+                const chunks = [];
+                const recorder = new MediaRecorder(combinedStream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 3000000,
+                    audioBitsPerSecond: 160000,
+                });
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.start(500);
+
+                // 同时开始
+                video.currentTime = 0;
+                audioSource.start(0);
+                await video.play();
+
+                const startTime = performance.now();
+
+                function drawFrame() {
+                    if (video.ended || video.paused) return;
+                    const elapsed = (performance.now() - startTime) / 1000;
+                    if (elapsed >= totalDuration) return;
+                    ctx.clearRect(0, 0, vw, vh);
+                    ctx.drawImage(video, 0, 0, vw, vh);
+                    const progress = Math.min(elapsed / totalDuration * 100, 98);
+                    mergeProgressBar.style.width = progress.toFixed(1) + '%';
+                    mergeProgressText.textContent =
+                        '合成中... ' + Math.round(elapsed) + 's / ' + Math.round(totalDuration) + 's';
+                    requestAnimationFrame(drawFrame);
+                }
+                drawFrame();
+
+                // 等待完成
+                await new Promise(resolve => {
+                    const checkEnd = () => {
+                        const elapsed = (performance.now() - startTime) / 1000;
+                        if (elapsed >= totalDuration || video.ended) {
+                            resolve();
+                        } else {
+                            requestAnimationFrame(checkEnd);
+                        }
+                    };
+                    checkEnd();
+                    // 超时保护
+                    setTimeout(resolve, (totalDuration + 5) * 1000);
+                });
+
+                await new Promise(r => setTimeout(r, 300));
+
+                const stopPromise = new Promise(resolve => {
+                    recorder.onstop = resolve;
+                });
+                recorder.stop();
+                await stopPromise;
+
+                await new Promise(r => setTimeout(r, 200));
+
+                mergeResultBlob = new Blob(chunks, { type: mimeType });
+
+                // 清理
+                video.pause();
+                audioSource.stop();
+                audioContext.close();
+                URL.revokeObjectURL(videoUrl);
+                URL.revokeObjectURL(audioUrl);
+
+                mergeProgressBar.style.width = '100%';
+                mergeProgressText.textContent = '✅ 合并完成！';
+                mergeProgressWrap.classList.remove('visible');
+                mergeOutput.classList.add('visible');
+                showStatus(mergeStatus, 'success',
+                    '✅ 合并成功！文件大小：' + formatFileSize(mergeResultBlob.size));
+            }
+
+            btnDownloadMerged.addEventListener('click', () => {
+                if (!mergeResultBlob) return;
+                const ext = getFileExtension(mergeResultBlob.type);
+                downloadBlob(mergeResultBlob, '合并视频_' + Date.now() + '.' + ext);
+            });
+
+            // ============ 通用函数 ============
+            function downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                // 延迟清理
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 1000);
+                showToast('📥 开始下载：' + filename);
+            }
+
+            function showStatus(element, type, message) {
+                element.textContent = message;
+                element.className = 'status-msg visible ' + type;
+            }
+
+            // ============ 初始化检测 ============
+            function checkSupport() {
+                if (!window.MediaRecorder) {
+                    showToast('⚠️ 您的浏览器不支持 MediaRecorder，部分功能可能不可用');
+                    return false;
+                }
+                const supported = MediaRecorder.isTypeSupported('video/webm') ||
+                    MediaRecorder.isTypeSupported('video/mp4') ||
+                    MediaRecorder.isTypeSupported('video/webm;codecs=vp8');
+                if (!supported) {
+                    showToast('⚠️ 浏览器编码支持有限，建议使用 Chrome 或 Edge');
+                }
+                return true;
+            }
+
+            checkSupport();
+
+            console.log('🎬 视频音频工具箱已就绪');
+            console.log('支持分离：从视频中提取音频 + 生成无声视频');
+            console.log('支持合并：将视频画面与音频文件合成为新视频');
+            console.log('注意：处理时间为视频实际时长，请耐心等待');
+            console.log('推荐使用 Chrome 或 Edge 浏览器获得最佳体验');
+        })();
+    </script>
+</body>
+</html>
