@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>视频音频工具箱</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d0d0d;
+            color: #ddd;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 20px;
+            text-align: center;
+            margin: 6px 0 2px;
+            color: #fff;
+        }
+        .sub {
+            text-align: center;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        #diag {
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-family: monospace;
+            background: #052e16;
+            border: 1px solid #166534;
+            color: #86efac;
+        }
+
+        .card {
+            background: #181818;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid #2a2a2a;
+        }
+        .card h2 {
+            font-size: 15px;
+            margin: 0 0 10px;
+            color: #eee;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        input[type="file"],
+        input[type="number"] {
+            width: 100%;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #2a2a2a;
+            background: #121212;
+            color: #ddd;
+        }
+
+        .row {
+            display: flex;
+            gap:8 }
+ {
+ 1;
+        }
+
+        button {
+            width: 100%;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            margin-top: 10px;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+        }
+        button:active {
+            opacity: 0.65;
+        }
+        button:disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .btn-blue {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .btn-green {
+            background: #22c55e;
+            color: #000;
+        }
+        .btn-red {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .res {
+            margin-top: 8px;
+            padding: 10px;
+            background: #111;
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid #2a2a2a;
+            word-break: break-all;
+            min-height: 20px;
+        }
+        .res a {
+            display: block;
+            margin-top: 5px;
+            color: #3b82f6;
+            font-weight: bold;
+            font-size: 13px;
+            text-decoration: underline;
+        }
+        .res .hint {
+            font-size: 10px;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        #logBox {
+            background: #050505;
+            color: #4f           10px;
+            border-radius: 8px;
+            max-height: 140px;
+            overflow: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            border: 1px solid #1a3a1a;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎬 视频音频工具箱</h1>
+    <div class="sub">合成 · 裁剪 · 提取 · 分离 | 本地处理 不上传</div>
+
+    <div id="diag">🔍 正在检测环境...</div>
+
+    <div class="card">
+        <h2>🔗 视频 + 音频 合成</h2>
+       文件" accept="video/*" />
+        <label>音频文件</label>
+        <input id="ma" type="file" accept="audio/*" />
+        <button class="btn-blue" id="btn1" onclick="doMerge()">开始合成</button>
+        <div id="r1" class="res"></div>
+    </div>
+
+    <div class="card">
+        <h2>✂️ 裁剪</h2>
+        <label>选择>
+        <input id="tf" type="file" accept="video/*,audio/*" />
+        <div class="row">
+            <div>
+                <label>开始(秒)</label>
+                <input id="ts" type="number" value="0" step="0.1" min="0" />
+            </div>
+            <div>
+                <label>时长(秒)</label>
+                <input id="td" type="number" value="10" step="0.1" min="0.1" />
+            </div>
+        </div>
+        <button class="btn-green" id="btn2" onclick="doTrim()">开始裁剪</button>
+        <div id="r2" class="res"></div>
+    </div>
+
+    <div class="card">
+        <h2>🎵 提取音频</h2>
+        <label>选择视频文件</label>
+        <input id="ev" type="file" accept="video/*" />
+        <button class="btn-blue" id="btn3" onclick="doExtract()">提取为 WAV</button>
+        <div id="r3" class="res"></div>
+    </div>
+
+    <div class="card">
+        <h2>🔀 音画分离</h2>
+        <label>选择视频文件</label>
+        <input id="sv" type="file" accept="video/*" />
+        <button class="btn-red" id="btn4" onclick="doSeparate()">分离为无声视频 + 音频</button>
+        <div id="r4" class="res"></div>
+    </div>
+
+    <div class="card">
+        <h2>📋 运行日志</h2>
+        <div id="logBox">等待操作...</div>
+    </div>
+
+    <!-- ffmpeg.wasm 0.11.6 单线程版，不需要 SharedArrayBuffer -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js">
+() {
+            // ============ 全局 ==
+ const { createFFmpeg, fetchFile } = FFmpeg;
+            let ffmpeg = null;
+            let ffmpegReady = false;
+            let busy = false;
+
+            const $diag = document.getElementById("diag");
+            const $logBox = document.getElementById("logBox");
+            const allBtns = document.querySelectorAll("button");
+
+            // ============ 日志 ============
+            function log(msg) {
+                var t = new Date().toLocaleTimeString();
+                $logBox.textContent += "[" + t + "] " + msg + "\n";
+                $logBox.scrollTop = $logBox.scrollHeight;
+            }
+
+            function clearLog() {
+                $logBox.textContent = "";
+            }
+
+            // ============ 诊断显示 ============
+            function diag(cls, msg) {
+                $diag.textContent = msg;
+            }
+
+            // ============ 按钮锁 ============
+            function lock() {
+                busy = true;
+                for (var i = 0; i < allBtns.length; i++) {
+                    allBtns[i].disabled = true;
+                }
+            }
+
+            function unlock() {
+                busy = false;
+                for (var i = 0; i < allBtns.length; i++) {
+                    allBtns[i].disabled = false;
+                }
+            }
+
+            // ============ 工具函数 ============
+            function getExt(file, fallback) {
+                var parts = file.name.split(".");
+                if (parts.length <= 1) return fallback || "mp4";
+                return parts.pop().toLowerCase();
+            }
+
+            function sizeMB(file) {
+                return (file.size / 1048576).toFixed(1);
+            }
+
+            function createDownload(containerId, data, fname, mime) {
+                var c = document.getElementById(containerId);
+                var blob = new Blob([data], { type: mime || "application/octet-stream" });
+                var url = URL.createObjectURL(blob);
+ var document                url;
+                a.download = fname;
+                a.textContent = "📥 下载：" + fname;
+                a.style.cssText =
+                    "display:block;margin-top:5px;color:#3b82f6;font-weight:bold;font-size:13px;text-decoration:underline;";
+                c.appendChild(a);
+                var hint = document.createElement("div");
+                hint.style.cssText = "font-size:10px;color:#666;margin-top:3px;";
+                hint.className = "hint";
+                hint.textContent = "iOS 用户：长按上方链接 →「下载链接文件」来保存";
+                c.appendChild(hint);
+            }
+
+            function clr(id, txt) {
+                document.getElementById(id).innerHTML = txt || "";
+            }
+
+            async function rm(name) {
+                try {
+                    ffmpeg.FS("unlink", name);
+                } catch (e) {
+                    // 文件不存在则忽略
+                }
+            }
+
+            // ============ 加载 FFmpeg ============
+            async function loadFFmpeg() {
+                if (ffmpegReady) return;
+
+                log("🚀 开始加载 FFmpeg（单线程版，无需 SAB）...");
+                diag("info", "⏳ 正在下载 FFmpeg 核心（约 16MB），请耐心等待...");
+
+                ffmpeg = createFFmpeg({
+                    log: true,
+                    corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
+                });
+
+                // 日志回调
+                ffmpeg.setLogger(function(info) {
+                    if (info.message && info.message.trim()) {
+                        log("  " + info.message.trim());
+                    }
+                });
+
+                // 进度回调
+                ffmpeg.setProgress(function(info) {
+                    var pct = Math.round(info.ratio * 100);
+                    if (!isNaN(pct) && pct >= 0 && + "%");
+                    }
+                });
+
+                log("⏳ 首次加载约需 30 秒到 2 分钟，请耐心等待...");
+                await ffmpeg.load();
+
+                ffmpegReady = true;
+                diag("info", "✅ FFmpeg 就绪！可以开始处理文件了。");
+                log("🎉 FFmpeg 加载完成！");
+            }
+
+            // ============ 功能 1：合成 ============
+            window.doMerge = async function() {
+                if (busy) return;
+                var vf = document.getElementById("mv").files[0];
+                var af = document.getElementById("ma").files[0];
+                if (!vf || !af) {
+                    alert("请同时选择视频和音频文件");
+                    return;
+                }
+                try {
+                    lock();
+                    clr("r1", "⏳ 合成中，请稍等...");
+                    await loadFFmpeg();
+                    log("视频: " + vf.name + " (" + sizeMB(vf) + " MB)");
+                    log("音频: " + af.name + " (" + sizeMB(af) + " MB)");
+
+                    var ve = getExt(vf, "mp4");
+                    var ae = getExt(af, "mp3");
+                    var vn = "_v." + ve;
+                    var an = "_a." + ae;
+                    var on = "merged_output.mp4";
+
+                    await rm(vn);
+                    await rm(an);
+                    await rm(on);
+
+                    ffmpeg.FS("writeFile", vn, await fetchFile(vf));
+                    ffmpeg.FS("writeFile", an, await fetchFile(af));
+
+                    log("正在合成...");
+                    await ffmpeg.run(
+                        "-i", vn,
+                        "-i", an,
+                        "-map", "0:v:0",
+                        "-map", "1:a:0",
+                        "-c:v", "copy",
+                        "-c:a", "aac",
+                        "-b:a", "192k",
+                        "-shortest",
+                        "-movflags", "+faststart",
+                        on
+                    );
+
+                    var data = ffmpeg.FS("readFile", on);
+                    clr("r1", "✅ 合成完成！");
+                    createDownload("r1", data, "合成视频.mp4", "video/mp4");
+                    log("✅ 输出: " + (data.length / 1048576).toFixed(1) + " MB");
+
+                    await rm(vn);
+                    await rm(an);
+                    await rm(on);
+                } catch (e) {
+                    log("❌ 合成失败: " + e.message);
+                    clr("r1", "❌ 失败: " + e.message);
+                } finally {
+                    unlock();
+                }
+            };
+
+            // ============ 功能 2：裁剪 ============
+            window.doTrim = async function() {
+                if (busy) return;
+                var f = document.getElementById("tf").files[0];
+                var ss = document.getElementById("ts").value || "0";
+                var dd = document.getElementById("td").value || "10";
+                if (!f) {
+                    alert("请选择要裁剪的文件");
+                    return;
+                }
+                if (Number(dd) <= 0) {
+                    alert("裁剪时长必须大于 0");
+                    return;
+                }
+                try {
+                    lock();
+                    clr("r2", "⏳ 裁剪中，请稍等...");
+                    await loadFFmpeg();
+
+                    var isAudio = f.type.startsWith("audio");
+                    var e = getExt(f, isAudio ? "mp3" : "mp4");
+                    var inn = "_trim_in." + e;
+                    var onn = "_trim_out." + e;
+
+                    log("裁剪: " + f.name + " (" + sizeMB(f) + " MB), 从 "  dd +
+                    "s");
+
+                    await rm(inn);
+                    await rm(onn);
+                    ffmpeg.FS("writeFile", inn, await fetchFile(f));
+
+                    await ffmpeg.run(
+                        "-ss", ss,
+                        "-i", inn,
+                        "-t", dd,
+                        "-c", "copy",
+                        "-avoid_negative_ts", "make_zero",
+                        onn
+                    );
+
+                    var data = ffmpeg.FS("readFile", onn);
+                    clr("r2", "✅ 裁剪完成！");
+                    var outName = (isAudio ? "裁剪音频." : "裁剪视频.") + e;
+                    createDownload("r2", data, outName, isAudio ? f.type :p4");
+                    log("✅ 输出: " + (data.length / 1048576).toFixed(1) + " MB");
+
+                    await rm(inn);
+                    await rm(onn);
+                } catch (e) {
+                    log("❌ 裁剪失败: " + e.message);
+                    clr("r2", "❌ 失败: " + e.message);
+                } finally {
+                    unlock();
+                }
+            };
+
+           ================ window.doExtract = async function() {
+                if (busy) return;
+                var f = document.getElementById("ev").files[0];
+                if (!f) {
+                    alert("请选择视频文件");
+                    return;
+                }
+                try {
+                    lock();
+                    clr("r3", "⏳ 提取中，请稍等...");
+                    await loadFFmpeg();
+
+                    var e = getExt(f, "mp4");
+                    var inn = "_ext_in." + e;
+                    var onn = "extracted_audio.wav";
+
+                    log("提取音频: " + f.name + " (" + sizeMB(f) + " MB)");
+
+                    await rm(inn);
+                    await rm(onn);
+                    ffmpeg.FS("writeFile", inn, await fetchFile(f));
+
+                    await ffmpeg.run(
+                        "-i", inn,
+                        "-vn",
+                        "-acodec", "pcm_s16le",
+                        "-ar", "44100",
+                        "-ac", "2",
+                        onn
+                    );
+
+                    var data = ffmpeg.FS("readFile", onn);
+                    clr("r3", "✅ 音频提取完成！");
+                    createDownload("r3", data, "提取音频.wav", "audio/wav");
+                    log("✅ 输出: " + (data.length / 1048576 + " MB");
+
+                    await rm(inn);
+                    await rm(onn);
+                } catch (e) {
+                    log("❌ 提取失败: " + e.message);
+                    clr("r3", "❌ 失败: " + e.message);
+                } finally {
+                    unlock();
+                }
+            };
+
+            // ============ 功能 4：音画分离 ============
+            window.doSeparate = async function() {
+                if (busy) return;
+                var f = document.getElementById("sv").files[0];
+                if (!f) {
+                    alert("请选择视频文件");
+                    return;
+                }
+                try {
+                    lock();
+                    clr("r4", "⏳ 分离中，请稍等...");
+                    await loadFFmpeg();
+
+                    var e = getExt(f, "mp4");
+                    var inn = "_sep_in." + e = =音频";
+
+(": f " + size)                   );
+ awaitm",(f                    await ffmpeg.run("-i", inn, "-an", "-c:v", "copy", vn);
+
+                    log("提取音频...");
+                    await ffmpeg.run(
+                        "-i", inn,
+                        "-vn",
+                        "-acodec", "pcm_s16le",
+                        "-ar", "44100",
+                        "-ac", "2",
+                        an
+                    );
+
+                    var vd = ffmpeg.FS("readFile", vn);
+                    var ad = ffmpeg.FS("readFile", an);
+
+                    clr("r4", "✅ 分离完成！");
+                    createDownload("r4", vd, "无声视频.mp4", "video/mp4");
+                    createDownload("r4", ad, "分离音频.wav", "audio/wav");
+                    log("✅ 无声视频: " + (vd.length / 1048576).toFixed(1) + " MB");
+                    log("✅ 音频: " + (ad.length / 1048576).toFixed(1) + " MB");
+
+                    await rm(inn);
+                    await rm(vn);
+                    await rm(an);
+                } catch (e) {
+                    log("❌ 分离失败: " + e.message);
+                    clr("r4", "❌ 失败: " + e.message);
+                } finally {
+                    unlock();
+                }
+            };
+
+            // ============ 初始化 ============
+            clearLog();
+            log("🔍 诊断运行环境...");
+            log("协议: " + location.protocol);
+            log("SharedArrayBuffer: " + (typeof SharedArrayBuffer !== "undefined" ? "✅ 可用" :
+                "⚠ 不可用（本工具不需要 SAB）"));
+            log("UserAgent: " + navigator.userAgent.slice(0, 80));
+            log("");
+            log("💡 本工具使用 ffmpeg.wasm 0.11.6 单线程版，不需要 SharedArrayBuffer");
+            log("💡 可直接通过 file:// 或 http:// 使用，无需特殊配置");
+            log("💡 首次使用需下载约 16MB 核心文件，请耐心等待");
+            log("");
+            diag("info", "✅ 环境正常 | 单线程 FFmpeg（无需 SAB）| 点击任意功能按钮开始（首次需下载核心约 16MB）");
+            log("✅ 就绪，等待操作...");
+        })();
+    </script>
+</body>
+</html>
