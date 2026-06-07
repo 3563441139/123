@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>手机端视频音频合成裁剪分离工具</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f5f6fa;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 22px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .tip {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    input, select, button {
+      width: 100%;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    input[type="file"] {
+      background: #fafafa;
+    }
+
+    button {
+      margin-top: 14px;
+      background: #1677ff;
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      background: #999;
+    }
+
+    .secondary {
+      background: #00a870;
+    }
+
+    .danger {
+      background: #ff4d4f;
+    }
+
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f0f7ff;
+      border-radius: 8px;
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .result a {
+      display: block;
+      margin-top: 8px;
+      color: #1677ff;
+      font-weight: bold;
+    }
+
+    #log {
+      white-space: pre-wrap;
+      background: #111;
+      color: #0f0;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 180px;
+      overflow: auto;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > div {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>视频音频合成 / 裁剪 / 分离工具</h1>
+
+  <div class="tip">
+    本工具在浏览器本地运行，不上传文件。首次使用需要加载 FFmpeg，可能需要等待一会儿。
+    手机处理大文件会比较慢，建议使用较小的视频或音频文件。
+  </div>
+
+  <div class="card">
+    <h2>1. 视频 + 音频合成</h2>
+
+    <label>选择视频文件</label>
+    <input id="mergeVideo" type="file" accept="video/*" />
+
+    <label>选择音频文件</label>
+    <input id="mergeAudio" type="file" accept="audio/*" />
+
+    <button onclick="mergeVideoAudio()">开始合成</button>
+
+    <div id="mergeResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 裁剪视频或音频</h2>
+
+    <label>选择要裁剪的文件</label>
+    <input id="trimFile" type="file" accept="video/*,audio/*" />
+
+    <div class="row">
+      <div>
+        <label>开始时间，秒</label>
+        <input id="trimStart" type="number" placeholder="例如 5" value="0" />
+      </div>
+
+      <div>
+        <label>裁剪时长，秒</label>
+        <input id="trimDuration" type="number" placeholder="例如 10" value="10" />
+      </div>
+    </div>
+
+    <button onclick="trimMedia()" class="secondary">开始裁剪</button>
+
+    <div id="trimResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 从视频中提取音频</h2>
+
+    <label>选择视频文件</label>
+    <input id="extractVideo" type="file" accept="video/*" />
+
+    <button onclick="extractAudio()">提取音频</button>
+
+    <div id="extractResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 视频音画分离</h2>
+
+    <label>选择视频文件</label>
+    <input id="separateVideo" type="file" accept="video/*" />
+
+    <button onclick="separateVideoAudio()" class="danger">
+      分离为无声视频 + 音频
+    </button>
+
+    <div id="separateResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>运行日志</h2>
+    <div id="log">等待操作...</div>
+  </div>
+
+  <script type="module">
+    import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+    import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+    const ffmpeg = new FFmpeg();
+    let loaded = false;
+
+    const logBox = document.getElementById("log");
+
+    function log(text) {
+      logBox.textContent += "\n" + text;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLog() {
+      logBox.textContent = "";
+    }
+
+    async function loadFFmpeg() {
+      if (loaded) return;
+
+      clearLog();
+      log("正在加载 FFmpeg，请稍等...");
+
+      ffmpeg.on("log", ({ message }) => {
+        log(message);
+      });
+
+      ffmpeg.on("progress", ({ progress }) => {
+        const percent = Math.round(progress * 100);
+        if (!Number.isNaN(percent)) {
+          log("处理进度：" + percent + "%");
+        }
+      });
+
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+
+      await ffmpeg.load({
+        coreURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.js`,
+          "text/javascript"
+        ),
+        wasmURL: await toBl<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>手机端视频音频合成裁剪分离工具</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f5f6fa;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 22px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .tip {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    input, select, button {
+      width: 100%;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    input[type="file"] {
+      background: #fafafa;
+    }
+
+    button {
+      margin-top: 14px;
+      background: #1677ff;
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      background: #999;
+    }
+
+    .secondary {
+      background: #00a870;
+    }
+
+    .danger {
+      background: #ff4d4f;
+    }
+
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f0f7ff;
+      border-radius: 8px;
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .result a {
+      display: block;
+      margin-top: 8px;
+      color: #1677ff;
+      font-weight: bold;
+    }
+
+    #log {
+      white-space: pre-wrap;
+      background: #111;
+      color: #0f0;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 180px;
+      overflow: auto;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > div {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>视频音频合成 / 裁剪 / 分离工具</h1>
+
+  <div class="tip">
+    本工具在浏览器本地运行，不上传文件。首次使用需要加载 FFmpeg，可能需要等待一会儿。
+    手机处理大文件会比较慢，建议使用较小的视频或音频文件。
+  </div>
+
+  <div class="card">
+    <h2>1. 视频 + 音频合成</h2>
+
+    <label>选择视频文件</label>
+    <input id="mergeVideo" type="file" accept="video/*" />
+
+    <label>选择音频文件</label>
+    <input id="mergeAudio" type="file" accept="audio/*" />
+
+    <button onclick="mergeVideoAudio()">开始合成</button>
+
+    <div id="mergeResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 裁剪视频或音频</h2>
+
+    <label>选择要裁剪的文件</label>
+    <input id="trimFile" type="file" accept="video/*,audio/*" />
+
+    <div class="row">
+      <div>
+        <label>开始时间，秒</label>
+        <input id="trimStart" type="number" placeholder="例如 5" value="0" />
+      </div>
+
+      <div>
+        <label>裁剪时长，秒</label>
+        <input id="trimDuration" type="number" placeholder="例如 10" value="10" />
+      </div>
+    </div>
+
+    <button onclick="trimMedia()" class="secondary">开始裁剪</button>
+
+    <div id="trimResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 从视频中提取音频</h2>
+
+    <label>选择视频文件</label>
+    <input id="extractVideo" type="file" accept="video/*" />
+
+    <button onclick="extractAudio()">提取音频</button>
+
+    <div id="extractResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 视频音画分离</h2>
+
+    <label>选择视频文件</label>
+    <input id="separateVideo" type="file" accept="video/*" />
+
+    <button onclick="separateVideoAudio()" class="danger">
+      分离为无声视频 + 音频
+    </button>
+
+    <div id="separateResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>运行日志</h2>
+    <div id="log">等待操作...</div>
+  </div>
+
+  <script type="module">
+    import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+    import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+    const ffmpeg = new FFmpeg();
+    let loaded = false;
+
+    const logBox = document.getElementById("log");
+
+    function log(text) {
+      logBox.textContent += "\n" + text;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLog() {
+      logBox.textContent = "";
+    }
+
+    async function loadFFmpeg() {
+      if (loaded) return;
+
+      clearLog();
+      log("正在加载 FFmpeg，请稍等...");
+
+      ffmpeg.on("log", ({ message }) => {
+        log(message);
+      });
+
+      ffmpeg.on("progress", ({ progress }) => {
+        const percent = Math.round(progress * 100);
+        if (!Number.isNaN(percent)) {
+          log("处理进度：" + percent + "%");
+        }
+      });
+
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+
+      await ffmpeg.load({
+        coreURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.js`,
+          "text/javascript"
+        ),
+        wasmURL: await toBl
